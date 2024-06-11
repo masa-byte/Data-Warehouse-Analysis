@@ -7,6 +7,7 @@ from pyspark.sql.types import (
     BooleanType,
     TimestampType,
 )
+import os
 
 schema = StructType(
     [
@@ -38,11 +39,15 @@ parsed_df = socketDF.select(from_json(col("value"), schema).alias("data")).selec
 )
 
 # saving the data to file in append mode, csv format
+directory = os.path.dirname(os.path.realpath(__file__))
+output_path = os.path.join(directory, "output")
+checkpoint_path = os.path.join(directory, "checkpoint")
+
 query = (
     parsed_df.writeStream.outputMode("append")
     .format("csv")
-    .option("path", "output")
-    .option("checkpointLocation", "checkpoint")
+    .option("path", output_path)
+    .option("checkpointLocation", checkpoint_path)
     .start()
 )
 

@@ -5,9 +5,10 @@ import pandas as pd
 import threading
 import os
 
+directory = os.path.dirname(os.path.realpath(__file__))
 ############# GOOGLE BIG QUERY #############
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = ""
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(directory, "")
 project_id = ""
 dataset_id = ""
 table_id = ""
@@ -48,9 +49,19 @@ def import_data(file_path):
             df["timestamp"] = pd.to_datetime(df["timestamp"])
             print(df.head())
 
-            client.load_table_from_dataframe(df, table_id, job_config=job_config)
+            job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
 
-            print(f"Data imported to BigQuery from {file_path}")
+            job.result()
+
+            if job.state == "DONE":
+                print("Job completed successfully.")
+                if job.errors:
+                    print(f"Job completed with errors: {job.errors}")
+                else:
+                    print(f"Data imported to BigQuery from {file_path}")
+            else:
+                print(f"Job did not complete successfully. Job state: {job.state}")
+
         except Exception as e:
             print(f"Error while importing data to BigQuery: {e}")
             pass
@@ -88,7 +99,8 @@ def create_output_directory(filepath):
 
 
 if __name__ == "__main__":
-    filepath = "output"
+
+    filepath = os.path.join(directory, "output")
     create_output_directory(filepath)
 
     file_processing_thread = threading.Thread(target=process_file_queue, daemon=True)
